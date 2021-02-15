@@ -119,7 +119,7 @@
                     })).then(response => response.json())  // convert to json
                     .then(json => {
                         console.log("response", json);
-                        csv = fill_csv(json.rows, arr[i], csv);
+                        csv = fill_csv(json.rows, arr[i].slice(0, 10), csv);
                         jsonArr.push(json.rows['samples']);
                         i++;
                         if (i == arr.length - 1) {
