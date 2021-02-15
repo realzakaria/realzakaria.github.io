@@ -1,0 +1,178 @@
+<!--<!doctype html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Leren Programmeren</title>
+    <script src="oefening6.js"></script>
+</head>
+
+<body>
+</body>
+
+</html> -->
+
+<!doctype html>
+<html lang="en">/
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384- 
+    fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="lening.css">
+
+
+
+    <title>Bootstrap example</title>
+</head>
+
+<body>
+    <div class="download-form">
+        <div class="form-div">
+            <h2 class="text-center">Download stats</h2>       
+            <div class="form-group">
+                <input id="year"  type="text" placeholder="Year" class="form-control"  />
+            </div>
+            <div class="form-group">
+                <input id="country"  type="text" placeholder="Partner" class="form-control"  />
+            </div>
+            <div class="form-group custom-file">
+                <input id="primary-file-upload" type="file"  class="custom-file-input"  />
+                <label class="custom-file-label" for="customInput">Select file</label>
+            </div>
+      
+        </div>
+
+    </div>
+
+
+    <div id="file-content">
+        Nothing uploaded yet
+    </div>
+
+
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <script>
+
+        const readUploadedFileAsText = (inputFile) => {
+            const temporaryFileReader = new FileReader();
+
+            return new Promise((resolve, reject) => {
+                temporaryFileReader.onerror = () => {
+                    temporaryFileReader.abort();
+                    reject(new DOMException("Problem parsing input file."));
+                };
+
+                temporaryFileReader.onload = () => {
+                    resolve(temporaryFileReader.result);
+                };
+                temporaryFileReader.readAsText(inputFile);
+            });
+        };
+
+        var arr;
+        var jsonArr = new Array();
+        var year=2019;
+        var partner = 'CN';
+        const handleUpload = async (event) => {
+            const file = event.target.files[0];
+            const fileContentDiv = document.querySelector('div#file-content');
+            var y = document.getElementById('year').value;
+            year= y.trim().length==4?parseInt(y):2019;
+            var p = document.getElementById('country').value;
+            partner = p.trim().length==2?p.trim().toUpperCase():'CN';
+            console.log("p, y", p, y, p.length, y.length);
+
+
+            try {
+                const fileContents = await readUploadedFileAsText(file)
+                fileContentDiv.innerHTML = fileContents;
+                var resultFound = false;
+                var i = 0;
+                var csv = 'product;Import value;Import quantity;Import supplementary unit\n';
+                arr = fileContents.split("\n");
+                console.log("arr", arr);
+                var fetchNow = function () {
+                    fetch('https://webgate.ec.europa.eu/flows/public/v1/stats?' + new URLSearchParams({
+                        includeUK: false,
+                        lang: 'EN',
+                        partner: partner,
+                        product: arr[i].slice(0, 8),
+                        years: year,
+                        includeUK: false
+                    })).then(response => response.json())  // convert to json
+                    .then(json => {
+                        console.log("response", json);
+                        csv = fill_csv(json.rows, arr[i], csv);
+                        jsonArr.push(json.rows['samples']);
+                        i++;
+                        if (i == arr.length - 1) {
+                            resultFound = true;
+                            console.log("csv ", csv);
+                            downloadCSV(csv);
+                        }
+                        else {
+                            fetchNow();
+                        }
+                    })    //print data to console
+                    .catch(err => console.log('Request Failed', err)); // Catch errors
+                }
+                fetchNow();
+
+            } catch (e) {
+                fileContentDiv.innerHTML = e.message
+            }
+        }
+
+        document.querySelector('input#primary-file-upload').addEventListener('change', handleUpload);
+
+        function fill_csv(data, product, csv) {
+            console.log("data", data);
+            var iv = 0;
+            var iq = 0;
+            var isq = 0;
+            data.forEach(function (row) {
+                if (row.country !== "United Kingdom") {
+
+                    iq += +((row.samples[year]['importQuantity'] * 1000).toFixed());
+                    isq += +((row.samples[year]['importSupplementaryQuantity'] * 1000).toFixed());
+                    iv += +(row.samples[year]['importValue'] * 1000).toFixed();
+                }
+
+            });
+            csv += product + ';' + iv + ';' + iq + ';' + isq + '\n';
+            return csv;
+        }
+
+        function downloadCSV(csv) {
+
+            var hiddenElement = document.createElement('a');
+            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+            hiddenElement.target = '_blank';
+            hiddenElement.download = 'ListStats.csv';
+            hiddenElement.click();
+        }
+
+
+
+    </script>
+
+</body>
+
+</html>
