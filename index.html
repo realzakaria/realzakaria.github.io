@@ -51,7 +51,12 @@
 
     </div>
 
-
+    <div class="progress">
+        <div class="progress-bar progress-bar-info progress-bar-striped" role="progressbar"
+        aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%">
+         0 % Complete 
+        </div>
+    </div>
     <div id="file-content">
         Nothing uploaded yet
     </div>
@@ -97,7 +102,7 @@
             year= y.trim().length==4?parseInt(y):2019;
             var p = document.getElementById('country').value;
             partner = p.trim().length==2?p.trim().toUpperCase():'CN';
-            console.log("p, y", p, y, p.length, y.length);
+           /// console.log("p, y", p, y, p.length, y.length);
 
 
             try {
@@ -107,7 +112,7 @@
                 var i = 0;
                 var csv = 'product;Import value;Import quantity;Import supplementary unit\n';
                 arr = fileContents.split("\n");
-                console.log("arr", arr);
+               // console.log("arr", arr);
                 var fetchNow = function () {
                     fetch('https://webgate.ec.europa.eu/flows/public/v1/stats?' + new URLSearchParams({
                         includeUK: false,
@@ -118,14 +123,19 @@
                         includeUK: false
                     })).then(response => response.json())  // convert to json
                     .then(json => {
-                        console.log("response", json);
+                       // console.log("response", json);
                         csv = fill_csv(json.rows, arr[i].slice(0, 10), csv);
                         jsonArr.push(json.rows['samples']);
                         i++;
+                        var val = ((i+1)/arr.length)*100;
+                        console.log("prog",val);
+                        $('.progress-bar').css('width', val+'%').attr('aria-valuenow', val);  
+                        document.getElementsByClassName("progress-bar")[0].innerHTML= Math.round(val)+"% complete";
                         if (i == arr.length - 1) {
                             resultFound = true;
-                            console.log("csv ", csv);
+                           // console.log("csv ", csv);
                             downloadCSV(csv);
+                            event.target.files[0]=null;
                         }
                         else {
                             fetchNow();
@@ -143,7 +153,7 @@
         document.querySelector('input#primary-file-upload').addEventListener('change', handleUpload);
 
         function fill_csv(data, product, csv) {
-            console.log("data", data);
+           // console.log("data", data);
             var iv = 0;
             var iq = 0;
             var isq = 0;
